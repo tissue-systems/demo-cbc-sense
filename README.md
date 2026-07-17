@@ -20,7 +20,10 @@ D1 Mini + DHT22 ──MQTT over TLS──▶ tissue ──▶ your Cell's sensor
 
 ## The hardware
 
-Around $12 total, no soldering if you buy the breakout version of the sensor:
+Around $12 total. The breakout version of the sensor needs no soldering, but
+**you may need to solder header pins onto the microcontroller board** — it
+depends on the board: many D1 Mini boards ship with the headers loose in the
+bag (some sellers offer them pre-soldered).
 
 - **Sensor — DHT22 / AM2302 on a breakout board**:
   [Amazon B0BBDSMSK6](https://www.amazon.com/dp/B0BBDSMSK6) or equivalent.
@@ -40,10 +43,10 @@ Full details and a diagram in [`firmware/README.md`](firmware/README.md).
 
 ## I have a tissue demo device — how do I onboard it?
 
-If you picked up a pre-built demo device at a Builders Club event, the cloud
-side is already prepared for you: the device is pre-provisioned, and the Cell
-code and c3 database in this repo are already deployed. The QR code on the
-device sets up a **free account of your own**:
+If you picked up a pre-built demo device at a Builders Club event, everything
+on the cloud side is already done for you: the device is already provisioned to
+**your own free demo account** (the QR code on the device creates it), and the
+Cell code and c3 database in this repo are already deployed.
 
 1. **Scan the QR code** on the device — it opens the tissue Sense setup page.
    **Create your free account** there (it's yours, not shared — each demo
@@ -59,10 +62,9 @@ To change what the device runs (different sensor, different cadence, your own
 ideas), see [How do I create or change firmware?](#how-do-i-create-or-change-firmware)
 — the exact firmware it ships with is in [`firmware/`](firmware/).
 
-> **Note on reporting cadence:** demo devices report every **2 seconds** purely
-> for show-floor effect, on a specially provisioned demo account. On a regular
-> tissue account, report **once a minute** — that's the supported cadence for
-> normal use (and plenty for temperature, which doesn't change faster than that).
+> **Note on reporting cadence:** you might have seen a demo that reports every
+> 2 seconds — regular accounts are rate controlled to **once per minute**
+> reporting.
 
 ---
 
@@ -101,6 +103,16 @@ mosquitto_pub -h ingest.tissue.dev -p 8883 \
   -t 'tissue/acct_9c3f21ab/dev_a1b2c3d4/env/temperature' \
   -m '{"value":21.4,"unit":"C"}'
 ```
+
+The `mosquitto_pub` / `mosquitto_sub` test utilities are part of
+[Eclipse Mosquitto](https://mosquitto.org/):
+
+- **macOS**: `brew install mosquitto`
+- **Linux**: `sudo apt install mosquitto-clients` (Debian/Ubuntu) or
+  `sudo dnf install mosquitto` (Fedora)
+- **Windows**: `winget install EclipseFoundation.Mosquitto`, or the installer
+  from [mosquitto.org/download](https://mosquitto.org/download/) — the client
+  tools land in `C:\Program Files\mosquitto\` (add it to your PATH)
 
 Each publish is delivered to your Cell's `sensor(event, env)` handler —
 [`cell/cell.js`](cell/cell.js) is a complete, commented example of what to do
@@ -282,6 +294,7 @@ Everything lives under [docs.tissue.systems](https://docs.tissue.systems):
 | g7 — object storage | https://docs.tissue.systems/docs/g7/overview/ |
 | Pulse — scheduled invocations (cron) | https://docs.tissue.systems/docs/pulse/overview/ |
 | Synapse — sensors & MQTT ingest | https://docs.tissue.systems/docs/synapse/overview/ |
+| Onboarding a device (incl. security model) | https://docs.tissue.systems/docs/synapse/onboarding/ |
 | Connect your own device | https://docs.tissue.systems/docs/synapse/byo-device/ |
 | Managing devices | https://docs.tissue.systems/docs/synapse/devices/ |
 | ribo CLI reference | https://docs.tissue.systems/docs/ribo/reference/ |
@@ -292,7 +305,34 @@ Everything lives under [docs.tissue.systems](https://docs.tissue.systems):
 ## Deploying the backend yourself
 
 The demo Cell is already live for demo devices, but the whole backend is
-reproducible from [`cell/`](cell/) on your own account:
+reproducible from [`cell/`](cell/) on your own account.
+
+**1. Install `ribo`** (the tissue CLI — a single self-contained binary):
+
+```bash
+# macOS (Apple Silicon)
+curl -L https://github.com/tissue-systems/ribo/releases/latest/download/ribo-macos-arm64 -o ribo
+chmod +x ribo && sudo mv ribo /usr/local/bin/ribo
+
+# macOS (Intel): same, with ribo-macos-x86_64
+# Linux (x86-64): same, with ribo-linux-x86_64
+```
+
+On **Windows**, run the Linux binary inside
+[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) — there is no
+native Windows build yet.
+
+**2. Log in** (opens your browser to authenticate the CLI with your account):
+
+```bash
+ribo login
+```
+
+The web dashboard at [app.tissue.systems](https://app.tissue.systems) is where
+you *view and manage* everything afterwards — cells, databases, buckets,
+sensor devices — but deploying itself happens through `ribo`.
+
+**3. Create the database and deploy:**
 
 ```bash
 ribo db create cbc-sense
