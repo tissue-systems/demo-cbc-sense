@@ -1,0 +1,5 @@
+.pio/
+include/config.h
+include/certs.h
+# per-device secret — baked into LittleFS with `pio run -t uploadfs`, never committed
+data/creds.json

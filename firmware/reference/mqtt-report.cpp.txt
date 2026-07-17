@@ -1,0 +1,156 @@
+// Reference only — NOT compiled (lives outside src/).
+// The MQTTS reporting firmware from milestone 0. Its publishMetric()/reportOnce()
+// and TLS+NTP setup fold into the reporting step AFTER the device links to your
+// account and obtains its device_id/token (see ONBOARDING.md).
+// Wemos D1 Mini (ESP8266) + DHT22 → tissue Sense
+//
+// Reads temperature + humidity from a DHT22 and publishes them to synapse over
+// MQTTS. Matches the live ingest contract:
+//
+//   host   ingest.tissue.dev : 8883  (MQTT 3.1.1 over TLS)
+//   auth   MQTT CONNECT  username = device_id, password = token
+//   topic  tissue/<account_id>/<device_id>/<metric>
+//   body   {"value": <float>, "unit": "<str>"}   QoS 0, clean session
+//
+// Wiring (bare 4-pin DHT22, grille facing you, pins down, left→right):
+//   pin1 VCC  → 3V3      pin2 DATA → D2 (GPIO4)      pin3 NC      pin4 GND → G
+//   10kΩ pull-up resistor between pin1 (VCC) and pin2 (DATA).
+
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+#include <DHT.h>
+#include <time.h>
+
+#include "config.h"
+
+#if DEVICE_TLS_INSECURE == 0
+#include "certs.h"   // provide ISRG_ROOT_X1 (see README) when pinning the CA
+#endif
+
+// ── globals ────────────────────────────────────────────────────────────────
+BearSSL::WiFiClientSecure net;
+PubSubClient              mqtt(net);
+DHT                       dht(DHT_PIN, DHT22);
+
+// Full topic prefix: tissue/<account>/<device>/  (metric is appended per read)
+static const String TOPIC_PREFIX =
+    String("tissue/") + ACCOUNT_ID + "/" + DEVICE_ID + "/";
+
+static unsigned long lastReport = 0;
+
+// ── helpers ────────────────────────────────────────────────────────────────
+static void connectWifi() {
+  Serial.printf("[wifi] connecting to %s", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.hostname(DEVICE_ID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.printf(" ok, ip=%s\n", WiFi.localIP().toString().c_str());
+}
+
+// TLS certificate validation needs a correct wall clock. Sync via NTP.
+static void syncClock() {
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.print("[time] syncing");
+  time_t now = time(nullptr);
+  while (now < 8 * 3600 * 2) {  // wait until it's clearly past epoch
+    delay(300);
+    Serial.print(".");
+    now = time(nullptr);
+  }
+  Serial.printf(" ok, %s", ctime(&now));
+}
+
+static void setupTls() {
+#if DEVICE_TLS_INSECURE
+  // Encrypted but UNVERIFIED — fine for bring-up, replace before production.
+  net.setInsecure();
+  Serial.println("[tls] insecure mode (no cert validation)");
+#else
+  static BearSSL::X509List trust(ISRG_ROOT_X1);
+  net.setTrustAnchors(&trust);
+  Serial.println("[tls] validating against ISRG Root X1");
+#endif
+  // Keep BearSSL buffers small so the handshake fits in ESP8266 heap.
+  net.setBufferSizes(512, 512);
+}
+
+static void connectMqtt() {
+  mqtt.setServer(INGEST_HOST, INGEST_PORT);
+  mqtt.setBufferSize(512);
+  while (!mqtt.connected()) {
+    Serial.printf("[mqtt] connecting to %s:%d as %s ... ",
+                  INGEST_HOST, INGEST_PORT, DEVICE_ID);
+    // clientId, username, password — username=device_id, password=token.
+    if (mqtt.connect(DEVICE_ID, DEVICE_ID, DEVICE_TOKEN)) {
+      Serial.println("connected");
+    } else {
+      int st = mqtt.state();
+      Serial.printf("failed rc=%d", st);
+      char err[80];
+      net.getLastSSLError(err, sizeof(err));
+      if (err[0]) Serial.printf("  tls=%s", err);
+      Serial.println("  (retry in 5s)");
+      delay(5000);
+    }
+  }
+}
+
+// Publish one metric as {"value":<v>,"unit":"<u>"} to <prefix><metric>.
+static bool publishMetric(const char *metric, float value, const char *unit) {
+  JsonDocument doc;
+  doc["value"] = round(value * 10.0) / 10.0;  // 1 decimal place
+  doc["unit"]  = unit;
+  char body[64];
+  size_t n = serializeJson(doc, body, sizeof(body));
+
+  String topic = TOPIC_PREFIX + METRIC_PREFIX + "/" + metric;
+  bool ok = mqtt.publish(topic.c_str(), (const uint8_t *)body, n, false);
+  Serial.printf("[pub] %s %s %s\n", topic.c_str(), body, ok ? "ok" : "FAIL");
+  return ok;
+}
+
+static void reportOnce() {
+  float t = dht.readTemperature();  // Celsius
+  float h = dht.readHumidity();
+  if (isnan(t) || isnan(h)) {
+    Serial.println("[dht] read failed (NaN) — check wiring + 10k pull-up");
+    return;
+  }
+  Serial.printf("[dht] %.1f C  %.1f %%RH\n", t, h);
+  publishMetric("temperature", t, "C");
+  publishMetric("humidity",    h, "%RH");
+}
+
+// ── arduino entry points ────────────────────────────────────────────────────
+void setup() {
+  Serial.begin(115200);
+  delay(200);
+  Serial.println("\n[boot] tissue Sense — D1 Mini + DHT22");
+  Serial.printf("[boot] device=%s account=%s\n", DEVICE_ID, ACCOUNT_ID);
+
+  dht.begin();
+  connectWifi();
+  syncClock();
+  setupTls();
+  connectMqtt();
+
+  reportOnce();          // first reading immediately
+  lastReport = millis();
+}
+
+void loop() {
+  if (WiFi.status() != WL_CONNECTED) connectWifi();
+  if (!mqtt.connected())             connectMqtt();
+  mqtt.loop();
+
+  if (millis() - lastReport >= REPORT_INTERVAL_MS) {
+    reportOnce();
+    lastReport = millis();
+  }
+}

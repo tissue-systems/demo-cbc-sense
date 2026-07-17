@@ -1,0 +1,42 @@
+// config.h — compile-time tunables. COPY this file to config.h and edit if needed.
+//
+//   cp include/config.h.example include/config.h   (or: make config)
+//
+// There are NO secrets here. Wi-Fi credentials are entered by the user at runtime
+// through the captive portal; the per-device reporting credentials are obtained at
+// runtime when the device links to your account, and stored in the ESP8266's own
+// flash (LittleFS). These are just build-time constants.
+
+#pragma once
+
+// ── Sensor ───────────────────────────────────────────────────────────────
+// DATA line. D4 == GPIO2 — the pin silk-printed "2", next to GND. NOTE: GPIO2
+// also drives the onboard LED, so the LED can't blink while the sensor lives
+// here — serial is the status channel (see LED_AVAILABLE in main.cpp).
+#define DHT_PIN             D4        // GPIO2 (silk "2")
+
+// How often to read + publish. 2s is the show-floor cadence of the CBC demo
+// device (= the DHT22's minimum sample period) and only works on the specially
+// provisioned demo account. On a regular tissue account report once a minute:
+//   #define REPORT_INTERVAL_MS  60000UL
+#define REPORT_INTERVAL_MS  2000UL
+
+// ── Captive portal ───────────────────────────────────────────────────────
+// SoftAP name shown to the user; a 4-hex chip suffix is appended at runtime,
+// e.g. "tissue-sense-3F9A".
+#define AP_NAME_PREFIX      "tissue-sense"
+#define PORTAL_TIMEOUT_S    180       // give up the portal after N seconds idle
+
+// The setup page the QR code points to (shown in the portal for context).
+#define WORKSHOP_URL        "https://tissue.systems/sense/start"
+
+// ── Account link ─────────────────────────────────────────────────────────
+// Public setup endpoint the device calls after Wi-Fi to link itself to your
+// account. It polls here until you've completed signup on the setup page.
+#define CLAIM_URL           "https://auth.tissue.systems/api/sense/claim"
+#define CLAIM_POLL_MS       5000UL    // delay between link attempts while waiting
+
+// ── Ingest (default; the account-link response can override the host) ────────
+#define INGEST_HOST         "ingest.tissue.dev"
+#define INGEST_PORT         8883
+#define METRIC_PREFIX       "env"     // metrics land at <prefix>/temperature, <prefix>/humidity

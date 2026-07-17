@@ -1,0 +1,79 @@
+[cell]
+# Pinned to the Cascadia Builders Club demo account. Deploying your own copy?
+# Delete the two account lines — ribo deploys to the account you're logged in
+# to — and pick any cell name you like.
+account_id = "acct_6119592d882d6823"
+account    = "Cascadia Builders Club"
+name = "cbc-sense"
+js   = "./cell.js"
+
+# Every minute: the offline dead-man's switch runs in pulse() (silence is the one
+# alarm no incoming event can raise — something must wake up and notice the
+# *absence* of data). Raw-readings prune piggybacks on the minute-0 run.
+[[pulse]]
+schedule = "* * * * *"
+
+[[bindings]]
+type     = "c3"
+binding  = "DB"
+database = "cbc-sense"
+
+# ── Alert thresholds (empty string = that check disabled) ─────────────────────
+# Crossing a threshold alerts immediately on ingest (in sensor()); recovery
+# alerts when the value comes back inside the range with a little hysteresis.
+[[bindings]]
+type    = "text"
+binding = "ALERT_TEMP_MIN_C"
+value   = ""
+
+[[bindings]]
+type    = "text"
+binding = "ALERT_TEMP_MAX_C"
+value   = ""
+
+[[bindings]]
+type    = "text"
+binding = "ALERT_HUM_MIN"
+value   = ""
+
+[[bindings]]
+type    = "text"
+binding = "ALERT_HUM_MAX"
+value   = ""
+
+# Seconds of silence before the sensor counts as offline. The device reports
+# every 2s and pulse fires once a minute, so 90s ≈ offline within ~2 minutes.
+[[bindings]]
+type    = "text"
+binding = "OFFLINE_AFTER_S"
+value   = "90"
+
+# Linked from alert messages so you can tap through to the live graphs.
+[[bindings]]
+type    = "text"
+binding = "DASHBOARD_URL"
+value   = "https://cbc-sense.wholly-74.tissue.dev"
+
+# ── Telegram bot credentials — NEVER checked into git ─────────────────────────
+# Alerts arrive as normal Telegram push notifications on your phone. Setup:
+#
+#   1. In Telegram, talk to @BotFather → /newbot → copy the bot token
+#      (looks like "1234567890:AA..." — this is TELEGRAM_BOT_TOKEN).
+#   2. Get your chat id: message @userinfobot (or add the bot to a group and
+#      call https://api.telegram.org/bot<token>/getUpdates after texting it).
+#   3. Send your bot one message first (bots cannot initiate a conversation).
+#   4. Store both values encrypted server-side — BEFORE deploying:
+#        ribo vault set cbc-sense TELEGRAM_BOT_TOKEN
+#        ribo vault set cbc-sense TELEGRAM_CHAT_ID
+#   5. ribo deploy
+#
+# GOTCHA: if a vault value is missing at deploy time the binding is stored as a
+# "***REMOVED***" placeholder and the cell sees that literal string — the code
+# detects this and silently disables alerting (the dashboard is unaffected).
+[[bindings]]
+type    = "vault"
+binding = "TELEGRAM_BOT_TOKEN"
+
+[[bindings]]
+type    = "vault"
+binding = "TELEGRAM_CHAT_ID"
