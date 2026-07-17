@@ -40,17 +40,20 @@ Full details and a diagram in [`firmware/README.md`](firmware/README.md).
 
 ## I have a tissue demo device — how do I onboard it?
 
-If you picked up a pre-built demo device at a Builders Club event, **everything on
-the cloud side is already done for you**: the device is provisioned to the free
-demo account, and the Cell code and c3 database in this repo are already deployed.
+If you picked up a pre-built demo device at a Builders Club event, the cloud
+side is already prepared for you: the device is pre-provisioned, and the Cell
+code and c3 database in this repo are already deployed. The QR code on the
+device sets up a **free account of your own**:
 
 1. **Scan the QR code** on the device — it opens the tissue Sense setup page.
+   **Create your free account** there (it's yours, not shared — each demo
+   device's QR link creates one for its owner).
 2. **Power the device from USB.** It creates a temporary Wi-Fi network named
    `tissue-sense-XXXX`.
 3. **Join that network** from your phone or laptop. A setup page opens
    automatically — pick your home Wi-Fi and enter its password.
-4. Done. The device connects, links itself, and readings appear on the live
-   dashboard within a few seconds.
+4. Done. The device connects, links itself to your new account, and readings
+   appear on your live dashboard within a few seconds.
 
 To change what the device runs (different sensor, different cadence, your own
 ideas), see [How do I create or change firmware?](#how-do-i-create-or-change-firmware)
