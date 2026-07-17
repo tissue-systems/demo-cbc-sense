@@ -9,6 +9,7 @@ web dashboard with charts.
 |---|---|
 | [`cell/`](cell/) | Everything needed to deploy the **backend** to tissue.systems: the Cell code (`cell.js`, which ingests readings, stores them, and serves the dashboard) and its configuration (`ribo.toml`). |
 | [`firmware/`](firmware/) | What you **flash onto the Wemos D1 Mini** device, with the sensor wired the way the firmware expects. Handles Wi-Fi setup (captive portal), links the device to a tissue account, and reports readings over MQTT/TLS. |
+| [`enclosure/`](enclosure/) | **3D-printable enclosure** for the board + sensor (`board-v4.stl`) — the case the Builders Club demo devices ship in. |
 
 ```
 D1 Mini + DHT22 ──MQTT over TLS──▶ tissue ──▶ your Cell's sensor() handler ──▶ c3 database
@@ -38,6 +39,10 @@ bag (some sellers offer them pre-soldered).
 
 Wiring (breakout board): sensor `+` → `3V3`, sensor `out` → `D4`, sensor `−` → `G`.
 Full details and a diagram in [`firmware/README.md`](firmware/README.md).
+
+**Enclosure**: [`enclosure/board-v4.stl`](enclosure/board-v4.stl) is the
+3D-printable case used for the Builders Club demo devices — print it as-is on
+any FDM printer, or remix it for your own build.
 
 ---
 
