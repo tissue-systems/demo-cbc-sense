@@ -28,7 +28,7 @@
 #define PORTAL_TIMEOUT_S    180       // give up the portal after N seconds idle
 
 // The setup page the QR code points to (shown in the portal for context).
-#define WORKSHOP_URL        "https://tissue.systems/sense/start"
+#define WORKSHOP_URL        "https://cbc.tissue.dev"
 
 // ── Account link ─────────────────────────────────────────────────────────
 // Public setup endpoint the device calls after Wi-Fi to link itself to your
