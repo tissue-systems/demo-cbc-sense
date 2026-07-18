@@ -102,12 +102,16 @@ it. The last topic segment is the metric name your Cell sees. This demo uses
 `device_id`, password = token, and publish JSON:
 
 ```bash
-mosquitto_pub -h ingest.tissue.dev -p 8883 \
-  --cafile /etc/ssl/certs/ca-certificates.crt \
+mosquitto_pub -h ingest.tissue.dev -p 8883 --tls-use-os-certs \
   -u dev_a1b2c3d4 -P key_... \
   -t 'tissue/acct_9c3f21ab/dev_a1b2c3d4/env/temperature' \
   -m '{"value":21.4,"unit":"C"}'
 ```
+
+(`--tls-use-os-certs` uses your system's trusted CAs — works the same on macOS,
+Linux, and Windows. On mosquitto older than 2.0.11, use
+`--cafile /etc/ssl/cert.pem` on macOS or
+`--cafile /etc/ssl/certs/ca-certificates.crt` on Linux instead.)
 
 The `mosquitto_pub` / `mosquitto_sub` test utilities are part of
 [Eclipse Mosquitto](https://mosquitto.org/):
