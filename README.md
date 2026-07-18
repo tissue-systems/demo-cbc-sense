@@ -312,7 +312,10 @@ Everything lives under [docs.tissue.systems](https://docs.tissue.systems):
 The demo Cell is already live for demo devices, but the whole backend is
 reproducible from [`cell/`](cell/) on your own account.
 
-**1. Install `ribo`** (the tissue CLI — a single self-contained binary):
+**1. Install `ribo`** (the tissue CLI — a single self-contained binary).
+Download it from the releases page,
+**https://github.com/tissue-systems/ribo/releases** — pick the binary for your
+platform — or grab it from the command line:
 
 ```bash
 # macOS (Apple Silicon)
