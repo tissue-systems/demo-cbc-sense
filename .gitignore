@@ -1,1 +1,4 @@
 .DS_Store
+
+# CBC show-floor variant (2s cadence) — intentionally untracked
+demo-firmware-2s/

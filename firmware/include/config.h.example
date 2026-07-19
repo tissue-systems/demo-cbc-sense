@@ -15,11 +15,10 @@
 // here — serial is the status channel (see LED_AVAILABLE in main.cpp).
 #define DHT_PIN             D4        // GPIO2 (silk "2")
 
-// How often to read + publish. 2s is the show-floor cadence of the CBC demo
-// device (= the DHT22's minimum sample period) and only works on the specially
-// provisioned demo account. On a regular tissue account report once a minute:
-//   #define REPORT_INTERVAL_MS  60000UL
-#define REPORT_INTERVAL_MS  2000UL
+// How often to read + publish. Once a minute is the supported cadence for
+// regular tissue accounts (faster readings are rate-controlled server-side).
+// The DHT22's own minimum sample period is 2s.
+#define REPORT_INTERVAL_MS  60000UL
 
 // ── Captive portal ───────────────────────────────────────────────────────
 // SoftAP name shown to the user; a 4-hex chip suffix is appended at runtime,
@@ -33,6 +32,13 @@
 // ── Account link ─────────────────────────────────────────────────────────
 // Public setup endpoint the device calls after Wi-Fi to link itself to your
 // account. It polls here until you've completed signup on the setup page.
+//
+// NOTE: this MAC-based claim flow is for the CBC demo devices only — it only
+// works for boards whose MAC was pre-registered at the prep bench. For a
+// regular device of your own, skip the claim flow entirely: register the
+// device with the ribo CLI (`ribo sensor add <cell>`) — or in the dashboard
+// under Synapse — and put the returned credentials on the device. See
+// https://docs.tissue.systems/docs/synapse/byo-device/
 #define CLAIM_URL           "https://auth.tissue.systems/api/sense/claim"
 #define CLAIM_POLL_MS       5000UL    // delay between link attempts while waiting
 

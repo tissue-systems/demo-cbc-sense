@@ -116,6 +116,11 @@ static void saveCreds() {
 // ── account link ──────────────────────────────────────────────────────────────
 // POST our MAC to the setup endpoint. 200 → we're linked (creds returned once).
 // Returns the HTTP status (or a negative transport error).
+//
+// CBC DEMO ONLY: this claim-by-MAC flow works only for boards pre-registered
+// at the prep bench. For your own device, register it with `ribo sensor add`
+// (or the dashboard's Synapse section) and use those credentials directly —
+// see https://docs.tissue.systems/docs/synapse/byo-device/
 static int linkOnce() {
   BearSSL::WiFiClientSecure client;
   applyTls(client);
@@ -263,6 +268,16 @@ void setup() {
 
   LittleFS.begin();
   dht.begin();
+
+  // Bench self-test: two readings straight to serial before any Wi-Fi, so the
+  // prep-bench script can verify wiring right after flashing. The DHT22 needs
+  // ~2s between reads and the very first read after power-on may be NaN.
+  for (int i = 0; i < 2; i++) {
+    delay(2500);
+    float st = dht.readTemperature(), sh = dht.readHumidity();
+    if (isnan(st) || isnan(sh)) Serial.println("[selftest] FAIL (NaN) — check wiring / pull-up");
+    else Serial.printf("[selftest] %.1f C  %.1f %%RH\n", st, sh);
+  }
 
   WiFiManager wm;
   wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);

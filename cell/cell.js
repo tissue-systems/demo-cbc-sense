@@ -6,10 +6,12 @@
  * reading into sensor(event, env) here; the dashboard polls /api/series at the
  * same 2s cadence and renders two live charts.
  *
- * NOTE: the 2-second cadence is show-floor flair on a specially provisioned
- * demo account. Running this on your own account? Report once a minute from
- * the device (firmware config.h) — everything here works unchanged, the
- * charts just update less often.
+ * CADENCE: the dashboard adapts to the device's reporting interval via the
+ * REPORT_INTERVAL_S text binding (default 60 — the supported cadence for
+ * regular accounts). The show-floor CBC org device reports every 2s on a
+ * specially provisioned account (ribo.toml sets REPORT_INTERVAL_S = "2");
+ * poll rate, the offline-alarm threshold, and the default chart window all
+ * derive from this value.
  *
  * Routes:
  *   GET /                        — live dashboard (two chart panels + stat tiles)
@@ -201,7 +203,8 @@ async function checkThreshold(env, metric, value, unit, device) {
  * to notice the absence of data. Never alarms before the first-ever reading.
  */
 async function checkOffline(env) {
-  const offlineAfterS = numBinding(env, "OFFLINE_AFTER_S") ?? 90;
+  const reportS = numBinding(env, "REPORT_INTERVAL_S") ?? 60;
+  const offlineAfterS = numBinding(env, "OFFLINE_AFTER_S") ?? Math.max(90, reportS * 3);
   const last = await env.DB.prepare(
     "SELECT device, recorded_at FROM readings ORDER BY id DESC LIMIT 1"
   ).first();
@@ -330,7 +333,7 @@ const PAGE = `<!DOCTYPE html>
     </svg>
     <div>
       <h1>tissue Sense — live</h1>
-      <div class="sub">temperature &amp; humidity, reported every 2 seconds</div>
+      <div class="sub">temperature &amp; humidity, live from your device</div>
     </div>
     <span class="chip" id="device">—</span>
     <span class="status"><span class="dot live" id="dot"></span><span id="status">connecting…</span></span>
@@ -380,9 +383,16 @@ const PAGE = `<!DOCTYPE html>
 (function () {
   'use strict';
   var NS = 'http://www.w3.org/2000/svg';
-  var windowSec = 120;
+  // Injected server-side from the REPORT_INTERVAL_S binding (default 60).
+  // Poll rate, the offline alarm, and the default window all derive from it.
+  var REPORT_S = __REPORT_S__;
+  var POLL_S = Math.max(2, Math.min(REPORT_S, 15));
+  var windowSec = REPORT_S <= 5 ? 120 : 3600;
   var series = { temperature: [], humidity: [] };
   var timer = null;
+  document.querySelectorAll('.filters button').forEach(function (b) {
+    b.setAttribute('aria-pressed', Number(b.dataset.w) === windowSec ? 'true' : 'false');
+  });
 
   function cssVar(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -567,7 +577,8 @@ const PAGE = `<!DOCTYPE html>
   // the "no data for Ns" counter climbs smoothly between polls. No alarm before
   // the first reading — a freshly deployed cell isn't an emergency.
   var lastSeenT = 0, fetchErr = false;
-  var ALARM_AFTER_S = 10;
+  var ALARM_AFTER_S = Math.max(10, REPORT_S * 2.5);
+  var LIVE_S = Math.max(8, REPORT_S * 1.5);
 
   function tick() {
     var dot = document.getElementById('dot'), st = document.getElementById('status');
@@ -584,7 +595,7 @@ const PAGE = `<!DOCTYPE html>
     document.title = 'tissue Sense — live';
     if (fetchErr) { dot.className = 'dot stale'; st.textContent = 'connection error'; }
     else if (age === null) { dot.className = 'dot stale'; st.textContent = 'no readings yet'; }
-    else if (age < 8) { dot.className = 'dot live'; st.textContent = 'live'; }
+    else if (age < LIVE_S) { dot.className = 'dot live'; st.textContent = 'live'; }
     else { dot.className = 'dot stale'; st.textContent = 'last seen ' + Math.round(age) + 's ago'; }
   }
 
@@ -625,7 +636,7 @@ const PAGE = `<!DOCTYPE html>
 
   var ticker = null;
   function start() {
-    if (!timer) { poll(); timer = setInterval(poll, 2000); }
+    if (!timer) { poll(); timer = setInterval(poll, POLL_S * 1000); }
     if (!ticker) { ticker = setInterval(tick, 1000); }
   }
   function stop() {
@@ -706,7 +717,10 @@ export default {
     }
 
     if (url.pathname === "/") {
-      return new Response(PAGE, { headers: { "content-type": "text/html; charset=utf-8" } });
+      const reportS = numBinding(env, "REPORT_INTERVAL_S") ?? 60;
+      return new Response(PAGE.replace("__REPORT_S__", String(reportS)), {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
     }
     return new Response("not found", { status: 404 });
   },

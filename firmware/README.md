@@ -122,11 +122,11 @@ sticker — the board keeps polling and links the moment the account exists.
 
 ## Reporting interval
 
-`REPORT_INTERVAL_MS` in `include/config.h` controls the cadence. The demo
-device reports every **2 seconds** — that's a show-floor setting on a specially
-provisioned demo account (and the DHT22's minimum sample period). **On a
-regular tissue account, report once a minute** (`60000UL`) — that's the
-supported cadence for normal use.
+`REPORT_INTERVAL_MS` in `include/config.h` controls the cadence. The default
+is **once a minute** (`60000UL`) — the supported cadence for regular tissue
+accounts (faster readings are rate-controlled server-side). The DHT22's own
+minimum sample period is 2 seconds; show-floor demos on specially provisioned
+accounts run that fast, but yours shouldn't.
 
 ## Re-provisioning / handing the board to someone else
 

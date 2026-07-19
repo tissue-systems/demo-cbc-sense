@@ -41,6 +41,15 @@ type    = "text"
 binding = "ALERT_HUM_MAX"
 value   = ""
 
+# The device's reporting cadence in seconds — drives the dashboard's poll rate,
+# offline-alarm threshold, and default chart window. The CBC org show-floor
+# device reports every 2s (specially provisioned account); leave this binding
+# out (default 60) for a regular account.
+[[bindings]]
+type    = "text"
+binding = "REPORT_INTERVAL_S"
+value   = "2"
+
 # Seconds of silence before the sensor counts as offline. The device reports
 # every 2s and pulse fires once a minute, so 90s ≈ offline within ~2 minutes.
 [[bindings]]
