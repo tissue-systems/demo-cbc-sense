@@ -1,9 +1,4 @@
 [cell]
-# Pinned to the Cascadia Builders Club demo account. Deploying your own copy?
-# Delete the two account lines — ribo deploys to the account you're logged in
-# to — and pick any cell name you like.
-account_id = "acct_6119592d882d6823"
-account    = "Cascadia Builders Club"
 name = "cbc-sense"
 js   = "./cell.js"
 
